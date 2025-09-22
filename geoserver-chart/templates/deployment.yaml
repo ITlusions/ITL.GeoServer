@@ -27,33 +27,10 @@ spec:
       serviceAccountName: {{ include "geoserver.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if and .Values.https.enabled .Values.https.autoGenerateKeystore (not .Values.https.keystoreSecret) .Values.https.keystoreGenerator.useInitContainer }}
       initContainers:
-        # Permission fix init container
-        - name: permission-fix
-          image: busybox:1.35
-          command:
-            - sh
-            - -c
-            - |
-              # Create necessary directories with proper permissions
-              mkdir -p /opt/geoserver_data
-              chmod -R 755 /opt/geoserver_data
-              chown -R 999:999 /opt/geoserver_data
-              # Ensure the volume is writable
-              if [ ! -w /opt/geoserver_data ]; then
-                echo "ERROR: /opt/geoserver_data is not writable"
-                exit 1
-              fi
-              echo "Permissions initialized successfully"
-          volumeMounts:
-            - name: geoserver-data
-              mountPath: /opt/geoserver_data
-          securityContext:
-            runAsUser: 0
-            runAsGroup: 0
-        {{- if and .Values.https.enabled .Values.https.autoGenerateKeystore (not .Values.https.keystoreSecret) .Values.https.keystoreGenerator.useInitContainer }}
         {{- include "geoserver.keystoreInitContainer" . | nindent 8 }}
-        {{- end }}
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
