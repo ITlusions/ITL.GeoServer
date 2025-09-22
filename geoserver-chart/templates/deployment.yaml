@@ -47,6 +47,10 @@ spec:
               protocol: TCP
             {{- end }}
           env:
+            {{- if .Values.geoserver.proxyBaseUrl }}
+            - name: PROXY_BASE_URL
+              value: {{ .Values.geoserver.proxyBaseUrl | quote }}
+            {{- end }}
             {{- if .Values.geoserver.admin.username }}
             - name: GEOSERVER_ADMIN_USER
               value: {{ .Values.geoserver.admin.username | quote }}

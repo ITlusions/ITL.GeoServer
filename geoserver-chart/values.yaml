@@ -126,6 +126,12 @@ geoserver:
     # Proxy configuration for HTTPS
     PROXY_BASE_URL: "https://geoserver.dev.itlusions.nl/geoserver"
     USE_JETTY_PROXY_HEADERS: "true"
+    # Force HTTPS for all URLs
+    GEOSERVER_CSRF_DISABLED: "false"
+    HTTP_SCHEME: "https"
+    HTTP_PORT: "443"
+    HTTPS_SCHEME: "https"
+    HTTPS_PORT: "443"
     # Run as unprivileged user
     RUN_UNPRIVILEGED: "false"
     RUN_WITH_USER_UID: "999"
