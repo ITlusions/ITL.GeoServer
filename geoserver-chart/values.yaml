@@ -86,10 +86,14 @@ affinity: {}
 
 # GeoServer specific configuration
 geoserver:
-  # Admin credentials (change these!)
+  # Admin credentials
   admin:
     username: "admin"
-    password: "geoserver"
+    # Auto-generate secure password (recommended)
+    autoGeneratePassword: true
+    # Manual password (only used when autoGeneratePassword=false)
+    # WARNING: Using static passwords is less secure
+    password: ""
     
   # GeoServer environment variables
   env:

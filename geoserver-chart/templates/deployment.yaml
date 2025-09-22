@@ -51,7 +51,7 @@ spec:
             - name: GEOSERVER_ADMIN_USER
               value: {{ .Values.geoserver.admin.username | quote }}
             {{- end }}
-            {{- if .Values.geoserver.admin.password }}
+            {{- if or .Values.geoserver.admin.password .Values.geoserver.admin.autoGeneratePassword }}
             - name: GEOSERVER_ADMIN_PASSWORD
               valueFrom:
                 secretKeyRef:

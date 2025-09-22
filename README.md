@@ -71,7 +71,8 @@ helm install my-geoserver ./geoserver-chart \
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `geoserver.admin.username` | Admin username | `admin` |
-| `geoserver.admin.password` | Admin password | `geoserver` |
+| `geoserver.admin.autoGeneratePassword` | Auto-generate secure admin password | `true` |
+| `geoserver.admin.password` | Admin password (when autoGenerate=false) | `""` |
 | `geoserver.env.SKIP_DEMO_DATA` | Skip demo data installation | `false` |
 | `geoserver.env.CORS_ENABLED` | Enable CORS | `true` |
 | `geoserver.env.WEBAPP_CONTEXT` | Application context path | `geoserver` |
@@ -393,11 +394,51 @@ https:
   keystorePassword: "your-static-password"
 ```
 
+### Admin Password Secret
+
+The chart supports two methods for managing admin password secrets:
+
+#### 1. Auto-generated Password (Default)
+
+When `geoserver.admin.autoGeneratePassword=true` (default), the chart automatically:
+
+- Generates a secure 32-character random password on first install
+- Preserves the password across upgrades
+- Creates a secret with both username and password
+
+```yaml
+geoserver:
+  admin:
+    username: "admin"
+    autoGeneratePassword: true  # Default
+```
+
+Retrieve the generated password:
+```bash
+# Linux/Mac
+./scripts/get-admin-password.sh [release-name] [namespace]
+
+# Windows
+.\scripts\get-admin-password.ps1 -ReleaseName "geoserver" -Namespace "default"
+```
+
+#### 2. Manual Password
+
+Set `geoserver.admin.autoGeneratePassword=false` to use a static password from values:
+
+```yaml
+geoserver:
+  admin:
+    username: "admin"
+    autoGeneratePassword: false
+    password: "your-static-password"
+```
+
 ### Secret Preservation
 
 - Auto-generated passwords are preserved across Helm upgrades
 - Existing secrets are never overwritten
-- Manual keystore addition is safe and idempotent
+- Admin credentials are stored securely in Kubernetes secrets
 
 ## SSL Certificate Setup
 
