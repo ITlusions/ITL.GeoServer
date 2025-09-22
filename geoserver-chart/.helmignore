@@ -25,6 +25,4 @@
 Thumbs.db
 # Helm build files
 *.tgz
-values-*.yaml
-!values.yaml
 README.md
