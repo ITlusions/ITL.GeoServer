@@ -62,9 +62,9 @@ ingress:
         - path: /
           pathType: Prefix
   tls:
-    - secretName: geoserver-tls
-      hosts:
+    - hosts:
         - geoserver.dev.itlusions.nl
+      secretName: geoserver-tls
 
 resources:
   limits:
