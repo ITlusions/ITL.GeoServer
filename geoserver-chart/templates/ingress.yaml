@@ -28,11 +28,23 @@ spec:
     - host: {{ .host | quote }}
       http:
         paths:
+          {{- if .paths }}
           {{- range .paths }}
           - path: {{ .path }}
             {{- if .pathType }}
             pathType: {{ .pathType }}
+            {{- else }}
+            pathType: Prefix
             {{- end }}
+            backend:
+              service:
+                name: {{ include "geoserver.fullname" $ }}
+                port:
+                  number: {{ $.Values.service.port }}
+          {{- end }}
+          {{- else }}
+          - path: /
+            pathType: Prefix
             backend:
               service:
                 name: {{ include "geoserver.fullname" $ }}
