@@ -16,12 +16,12 @@ spec:
   {{- if .Values.ingress.tls }}
   tls:
     {{- range .Values.ingress.tls }}
-    {{- if .secretName }}
+    {{- if .Values.tls.secretName }}
     - hosts:
         {{- range .hosts }}
         - {{ . | quote }}
         {{- end }}
-      secretName: {{ .secretName }}
+      secretName: {{ .Values.tls.secretName }}
     {{- end }}
     {{- end }}
   {{- end }}
