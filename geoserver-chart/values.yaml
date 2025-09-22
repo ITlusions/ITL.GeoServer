@@ -27,9 +27,11 @@ podAnnotations: {}
 
 podSecurityContext:
   fsGroup: 999
-  runAsNonRoot: true
-  runAsUser: 999
-  runAsGroup: 999
+  # Allow container to start as root for initialization
+  # The startup.sh script will drop to user 999 automatically
+  # runAsNonRoot: true
+  # runAsUser: 999
+  # runAsGroup: 999
 
 securityContext:
   allowPrivilegeEscalation: false
@@ -37,8 +39,9 @@ securityContext:
     drop:
     - ALL
   readOnlyRootFilesystem: false
-  runAsNonRoot: true
-  runAsUser: 999
+  # Allow initial root execution for user creation
+  # runAsNonRoot: true
+  # runAsUser: 999
 
 service:
   type: ClusterIP
@@ -110,12 +113,10 @@ geoserver:
     WEBAPP_CONTEXT: "geoserver"
     # Redirect root to geoserver web interface
     ROOT_WEBAPP_REDIRECT: "true"
-    # Run as unprivileged user (after initialization)
+    # Run as unprivileged user
     RUN_UNPRIVILEGED: "true"
     RUN_WITH_USER_UID: "999"
     RUN_WITH_USER_GID: "999"
-    # Force container to initialize properly
-    GEOSERVER_DATA_DIR: "/opt/geoserver_data"
     
   # Extensions to install on startup
   extensions:
