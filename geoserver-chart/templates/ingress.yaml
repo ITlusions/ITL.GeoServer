@@ -10,7 +10,7 @@ metadata:
     {{- toYaml . | nindent 4 }}
     {{- end }}
     {{- if eq .Values.ingress.className "traefik" }}
-    traefik.ingress.kubernetes.io/router.middlewares: "{{ .Release.Namespace }}-{{ include "geoserver.fullname" . }}-headers@kubernetescrd,{{ .Release.Namespace }}-{{ include "geoserver.fullname" . }}-compress@kubernetescrd"
+    traefik.ingress.kubernetes.io/router.middlewares: "{{ .Release.Namespace }}-{{ include "geoserver.fullname" . }}-redirect@kubernetescrd,{{ .Release.Namespace }}-{{ include "geoserver.fullname" . }}-headers@kubernetescrd,{{ .Release.Namespace }}-{{ include "geoserver.fullname" . }}-compress@kubernetescrd"
     {{- end }}
 spec:
   {{- if .Values.ingress.className }}

@@ -15,6 +15,7 @@ spec:
       X-Frame-Options: "SAMEORIGIN"
       X-Content-Type-Options: "nosniff"
       Referrer-Policy: "strict-origin-when-cross-origin"
+      Content-Security-Policy: "default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; form-action 'self' https: http:; connect-src 'self' https: wss: ws:;"
     sslRedirect: true
     sslHost: {{ (index .Values.ingress.hosts 0).host }}
     sslForceHost: true
@@ -27,4 +28,16 @@ metadata:
     {{- include "geoserver.labels" . | nindent 4 }}
 spec:
   compress: {}
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ include "geoserver.fullname" . }}-redirect
+  labels:
+    {{- include "geoserver.labels" . | nindent 4 }}
+spec:
+  redirectRegex:
+    regex: "^http://{{ (index .Values.ingress.hosts 0).host }}/(.*)"
+    replacement: "https://{{ (index .Values.ingress.hosts 0).host }}/${1}"
+    permanent: true
 {{- end }}
