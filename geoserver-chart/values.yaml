@@ -50,11 +50,21 @@ service:
 
 ingress:
   enabled: true
-  className: "nginx"
+  className: "traefik"
   annotations:
+    # Nginx annotations
     nginx.ingress.kubernetes.io/rewrite-target: /
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-redirect-from: "http://"
+    nginx.ingress.kubernetes.io/proxy-redirect-to: "https://"
+    # Traefik middleware will be set in template based on className
+    # Common proxy headers
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header X-Forwarded-Proto https;
+      proxy_set_header X-Forwarded-Port 443;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    # Certificate management
     cert-manager.io/cluster-issuer: "letsencrypt-issuer"
   hosts:
     - host: geoserver.dev.itlusions.nl
@@ -107,12 +117,15 @@ geoserver:
     CORS_ALLOWED_ORIGINS: "*"
     CORS_ALLOWED_METHODS: "GET,POST,PUT,DELETE,HEAD,OPTIONS"
     CORS_ALLOWED_HEADERS: "Origin,Accept,X-Requested-With,Content-Type,Access-Control-Request-Method,Access-Control-Request-Headers"
-    # Memory settings
-    EXTRA_JAVA_OPTS: "-Xms512m -Xmx1g"
+    # Memory settings and proxy configuration
+    EXTRA_JAVA_OPTS: "-Xms512m -Xmx1g -Dorg.eclipse.jetty.server.Request.maxFormContentSize=2000000"
     # Context path (empty for root)
     WEBAPP_CONTEXT: "geoserver"
     # Redirect root to geoserver web interface
     ROOT_WEBAPP_REDIRECT: "true"
+    # Proxy configuration for HTTPS
+    PROXY_BASE_URL: "https://geoserver.dev.itlusions.nl/geoserver"
+    USE_JETTY_PROXY_HEADERS: "true"
     # Run as unprivileged user
     RUN_UNPRIVILEGED: "false"
     RUN_WITH_USER_UID: "999"

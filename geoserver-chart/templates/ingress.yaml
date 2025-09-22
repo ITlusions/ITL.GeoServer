@@ -5,10 +5,13 @@ metadata:
   name: {{ include "geoserver.fullname" . }}
   labels:
     {{- include "geoserver.labels" . | nindent 4 }}
-  {{- with .Values.ingress.annotations }}
   annotations:
+    {{- with .Values.ingress.annotations }}
     {{- toYaml . | nindent 4 }}
-  {{- end }}
+    {{- end }}
+    {{- if eq .Values.ingress.className "traefik" }}
+    traefik.ingress.kubernetes.io/router.middlewares: "{{ .Release.Namespace }}-{{ include "geoserver.fullname" . }}-headers@kubernetescrd,{{ .Release.Namespace }}-{{ include "geoserver.fullname" . }}-compress@kubernetescrd"
+    {{- end }}
 spec:
   {{- if .Values.ingress.className }}
   ingressClassName: {{ .Values.ingress.className }}

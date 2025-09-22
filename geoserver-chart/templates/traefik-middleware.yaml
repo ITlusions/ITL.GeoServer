@@ -1,0 +1,30 @@
+{{- if and .Values.ingress.enabled (eq .Values.ingress.className "traefik") }}
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ include "geoserver.fullname" . }}-headers
+  labels:
+    {{- include "geoserver.labels" . | nindent 4 }}
+spec:
+  headers:
+    customRequestHeaders:
+      X-Forwarded-Proto: "https"
+      X-Forwarded-Port: "443"
+      X-Forwarded-For: ""
+    customResponseHeaders:
+      X-Frame-Options: "SAMEORIGIN"
+      X-Content-Type-Options: "nosniff"
+      Referrer-Policy: "strict-origin-when-cross-origin"
+    sslRedirect: true
+    sslHost: {{ (index .Values.ingress.hosts 0).host }}
+    sslForceHost: true
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ include "geoserver.fullname" . }}-compress
+  labels:
+    {{- include "geoserver.labels" . | nindent 4 }}
+spec:
+  compress: {}
+{{- end }}
