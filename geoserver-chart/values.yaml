@@ -55,16 +55,16 @@ ingress:
     nginx.ingress.kubernetes.io/rewrite-target: /
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    cert-manager.io/cluster-issuer: "letsencrypt-issuer"
   hosts:
-    - host: geoserver.example.com
+    - host: geoserver.dev.itlusions.nl
       paths:
         - path: /
           pathType: Prefix
   tls:
     - secretName: geoserver-tls
       hosts:
-        - geoserver.example.com
+        - geoserver.dev.itlusions.nl
 
 resources:
   limits:
