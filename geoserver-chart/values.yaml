@@ -114,7 +114,7 @@ geoserver:
     # Redirect root to geoserver web interface
     ROOT_WEBAPP_REDIRECT: "true"
     # Run as unprivileged user
-    RUN_UNPRIVILEGED: "true"
+    RUN_UNPRIVILEGED: "false"
     RUN_WITH_USER_UID: "999"
     RUN_WITH_USER_GID: "999"
     
