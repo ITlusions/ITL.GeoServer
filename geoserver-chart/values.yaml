@@ -5,7 +5,7 @@
 replicaCount: 1
 
 image:
-  repository: kartoza/geoserver
+  repository: docker.osgeo.org/geoserver
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: "2.27.2"
