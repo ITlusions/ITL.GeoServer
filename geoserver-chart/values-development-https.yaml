@@ -1,0 +1,83 @@
+# Development values for geoserver chart with HTTPS enabled
+# This configuration uses automatic keystore generation
+
+# Use latest development image
+image:
+  tag: "2.27.2"
+  pullPolicy: Always
+
+# Enable demo data for development
+geoserver:
+  admin:
+    username: "admin"
+    password: "admin123"
+  env:
+    SKIP_DEMO_DATA: "false"
+    CORS_ENABLED: "true"
+    CORS_ALLOWED_ORIGINS: "*"
+    EXTRA_JAVA_OPTS: "-Xms256m -Xmx1g"
+  extensions:
+    enabled: true
+    stable:
+      - "wps"
+      - "css"
+      - "importer"
+  persistence:
+    enabled: true
+    size: "5Gi"
+    storageClass: ""
+
+# Enable HTTPS with automatic keystore generation
+https:
+  enabled: true
+  autoGenerateKeystore: true
+  keystoreGenerator:
+    domain: "geoserver.local"
+    organization: "Development"
+    country: "US"
+    validityDays: 30  # Short validity for dev
+
+# Enable ingress for local testing
+ingress:
+  enabled: true
+  className: "nginx"
+  hosts:
+    - host: geoserver.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: geoserver-tls
+      hosts:
+        - geoserver.local
+
+# Smaller resources for development
+resources:
+  limits:
+    cpu: 1000m
+    memory: 2Gi
+  requests:
+    cpu: 200m
+    memory: 512Mi
+
+
+
+# Enable health checks
+healthcheck:
+  enabled: true
+
+# Disable network policies for easier development
+networkPolicy:
+  enabled: false
+
+# Single replica for development
+replicaCount: 1
+
+# Disable autoscaling
+autoscaling:
+  enabled: false
+
+# Allow on any node
+nodeSelector: {}
+tolerations: []
+affinity: {}

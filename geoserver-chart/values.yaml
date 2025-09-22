@@ -1,0 +1,225 @@
+# Default values for geoserver.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: docker.osgeo.org/geoserver
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "2.27.2"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  fsGroup: 999
+  runAsNonRoot: true
+  runAsUser: 999
+  runAsGroup: 999
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 999
+
+service:
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: geoserver.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: geoserver-tls
+      hosts:
+        - geoserver.example.com
+
+resources:
+  limits:
+    cpu: 2000m
+    memory: 2Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# GeoServer specific configuration
+geoserver:
+  # Admin credentials (change these!)
+  admin:
+    username: "admin"
+    password: "geoserver"
+    
+  # GeoServer environment variables
+  env:
+    # Skip demo data for production
+    SKIP_DEMO_DATA: "false"
+    # Enable CORS
+    CORS_ENABLED: "true"
+    CORS_ALLOWED_ORIGINS: "*"
+    CORS_ALLOWED_METHODS: "GET,POST,PUT,DELETE,HEAD,OPTIONS"
+    CORS_ALLOWED_HEADERS: "Origin,Accept,X-Requested-With,Content-Type,Access-Control-Request-Method,Access-Control-Request-Headers"
+    # Memory settings
+    EXTRA_JAVA_OPTS: "-Xms512m -Xmx1g"
+    # Context path (empty for root)
+    WEBAPP_CONTEXT: "geoserver"
+    # Redirect root to geoserver web interface
+    ROOT_WEBAPP_REDIRECT: "true"
+    # Run as unprivileged user
+    RUN_UNPRIVILEGED: "true"
+    RUN_WITH_USER_UID: "999"
+    RUN_WITH_USER_GID: "999"
+    
+  # Extensions to install on startup
+  extensions:
+    enabled: false
+    stable:
+      - "wps"
+      - "css"
+      - "importer"
+    community: []
+    
+  # Data directory persistence
+  persistence:
+    enabled: true
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 10Gi
+    # Use existing PVC
+    existingClaim: ""
+    
+  # Additional libraries mount
+  additionalLibs:
+    enabled: false
+    # existingClaim: "geoserver-libs-pvc"
+    
+  # Additional fonts mount
+  additionalFonts:
+    enabled: false
+    # existingClaim: "geoserver-fonts-pvc"
+
+# HTTPS/TLS configuration
+https:
+  enabled: false
+  # Path to keystore file in the container
+  keystoreFile: "/opt/keystore.jks"
+  keystorePassword: "changeit"
+  keyAlias: "server"
+  # Secret containing the JKS keystore
+  # The secret should have a key named "keystore.jks"
+  keystoreSecret: ""
+  # Manual secret creation (set to true to use static password from values)
+  # When false, a random password will be generated and preserved across upgrades
+  manualSecretCreation: false
+  
+  # Automatic keystore generation
+  # Set to false to disable keystore creation entirely
+  # Useful scenarios for autoGenerateKeystore=false:
+  #   - Using ingress-only TLS termination
+  #   - Bringing your own keystore via keystoreSecret
+  #   - Using external certificate management
+  # Only used when keystoreSecret is empty and https.enabled is true
+  autoGenerateKeystore: true
+  keystoreGenerator:
+    # Override the generated secret name (defaults to <fullname>-https)
+    secretName: ""
+    # Use init container instead of job (default: false - uses job)
+    # Init container generates keystore on every pod restart
+    # Job generates keystore once and stores in secret
+    useInitContainer: false
+    # Certificate details for self-signed certificate
+    domain: "geoserver.local"
+    organization: "GeoServer"
+    country: "US"
+    # Certificate validity in days
+    validityDays: 365
+    # Container image for keystore generation
+    image: "docker.io/alpine/openssl:latest"
+    # Resources for the keystore generator job/init container
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+    # Node selector for the keystore generator job
+    nodeSelector: {}
+    # Tolerations for the keystore generator job
+    tolerations: []
+
+# PostgreSQL JNDI configuration
+postgresql:
+  jndi:
+    enabled: false
+    host: "postgresql"
+    port: 5432
+    database: "geoserver"
+    username: "geoserver"
+    password: "geoserver"
+    resourceName: "jdbc/postgres"
+    # Use existing secret for database credentials
+    existingSecret: ""
+    existingSecretUsernameKey: "username"
+    existingSecretPasswordKey: "password"
+
+# Health check configuration
+healthcheck:
+  enabled: true
+  url: "http://localhost:8080/geoserver/web/wicket/resource/org.geoserver.web.GeoServerBasePage/img/logo.png"
+
+# Monitoring and observability
+monitoring:
+  enabled: false
+  serviceMonitor:
+    enabled: false
+    namespace: ""
+    interval: 30s
+    path: /geoserver/rest/about/version
+    
+# Network policies
+networkPolicy:
+  enabled: false
+  ingress: []
+  egress: []

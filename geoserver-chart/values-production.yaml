@@ -1,0 +1,144 @@
+# Production values for GeoServer
+# Use this as a template for production deployments
+
+replicaCount: 3
+
+image:
+  repository: docker.osgeo.org/geoserver
+  tag: "2.27.2"
+  pullPolicy: IfNotPresent
+
+geoserver:
+  admin:
+    username: "admin"
+    password: "CHANGE_ME_SECURE_PASSWORD"
+    
+  env:
+    # Production settings
+    SKIP_DEMO_DATA: "true"
+    CORS_ENABLED: "true"
+    CORS_ALLOWED_ORIGINS: "https://yourdomain.com"
+    EXTRA_JAVA_OPTS: "-Xms1g -Xmx2g -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
+    WEBAPP_CONTEXT: "geoserver"
+    ROOT_WEBAPP_REDIRECT: "true"
+    RUN_UNPRIVILEGED: "true"
+    
+  extensions:
+    enabled: true
+    stable:
+      - "wps"
+      - "css"
+      - "importer"
+      - "vectortiles"
+      - "printing"
+      - "control-flow"
+      - "monitor"
+    
+  persistence:
+    enabled: true
+    size: "50Gi"
+    storageClass: "fast-ssd"
+    accessMode: ReadWriteOnce
+
+# HTTPS Configuration
+https:
+  enabled: true
+  # Use auto-generated secret with random password (recommended)
+  manualSecretCreation: false
+  # keystoreSecret: "geoserver-ssl-cert"  # Uncomment to use existing secret
+
+# Ingress with SSL
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: geoserver.yourdomain.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: geoserver-letsencrypt-tls
+      hosts:
+        - geoserver.yourdomain.com
+
+# Resource limits for production
+resources:
+  limits:
+    cpu: "4000m"
+    memory: "4Gi"
+  requests:
+    cpu: "1000m"
+    memory: "2Gi"
+
+# Auto-scaling
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# PostgreSQL connection
+postgresql:
+  jndi:
+    enabled: true
+    host: "postgresql.database.svc.cluster.local"
+    port: 5432
+    database: "geoserver"
+    existingSecret: "postgresql-credentials"
+    existingSecretUsernameKey: "username"
+    existingSecretPasswordKey: "password"
+    resourceName: "jdbc/postgres"
+
+# Health checks
+healthcheck:
+  enabled: true
+
+# Monitoring
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: "30s"
+
+# Security
+podSecurityContext:
+  fsGroup: 999
+  runAsNonRoot: true
+  runAsUser: 999
+  runAsGroup: 999
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 999
+
+# Network policy (adjust based on your needs)
+networkPolicy:
+  enabled: true
+  ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            name: ingress-nginx
+      ports:
+      - protocol: TCP
+        port: 8080
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            name: monitoring
+      ports:
+      - protocol: TCP
+        port: 8080

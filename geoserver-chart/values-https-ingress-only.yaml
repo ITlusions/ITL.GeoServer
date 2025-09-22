@@ -1,0 +1,103 @@
+# HTTPS without keystore - TLS termination at ingress level only
+# This configuration enables HTTPS port but relies on ingress for TLS termination
+
+# Standard image configuration
+image:
+  repository: docker.osgeo.org/geoserver
+  tag: "2.27.2"
+  pullPolicy: IfNotPresent
+
+# GeoServer admin credentials
+geoserver:
+  admin:
+    username: "admin"
+    password: "secure-admin-password"
+  env:
+    SKIP_DEMO_DATA: "false"
+    CORS_ENABLED: "true"
+    CORS_ALLOWED_ORIGINS: "*"
+    EXTRA_JAVA_OPTS: "-Xms512m -Xmx2g"
+  persistence:
+    enabled: true
+    size: "10Gi"
+
+# Enable HTTPS port but disable keystore creation
+# This is useful when TLS termination happens at the ingress level
+https:
+  enabled: true
+  # Disable automatic keystore generation
+  autoGenerateKeystore: false
+  # No keystore secret needed
+  keystoreSecret: ""
+
+# Service configuration - expose both HTTP and HTTPS ports
+service:
+  type: ClusterIP
+  port: 80
+  httpsPort: 443
+  targetPort: 8080
+  httpsTargetPort: 8443
+
+# Ingress with TLS termination
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    # Force SSL redirect
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # Use cert-manager for automatic certificates
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    # Backend protocol is HTTP since GeoServer won't have keystore
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+  hosts:
+    - host: geoserver.yourdomain.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: geoserver-ingress-tls
+      hosts:
+        - geoserver.yourdomain.com
+
+# Resources for production
+resources:
+  limits:
+    cpu: 2000m
+    memory: 4Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+# Health checks using HTTP since no internal TLS
+healthcheck:
+  enabled: true
+  url: "/geoserver/web/wicket/resource/org.geoserver.web.GeoServerBasePage/img/logo.png"
+
+# Enable autoscaling
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+
+# Node placement
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Security context
+podSecurityContext:
+  fsGroup: 999
+  runAsNonRoot: true
+  runAsUser: 999
+  runAsGroup: 999
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 999
+  runAsGroup: 999
+  capabilities:
+    drop:
+    - ALL

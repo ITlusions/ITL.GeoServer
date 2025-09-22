@@ -1,0 +1,194 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "geoserver.fullname" . }}
+  labels:
+    {{- include "geoserver.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "geoserver.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "geoserver.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "geoserver.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if and .Values.https.enabled .Values.https.autoGenerateKeystore (not .Values.https.keystoreSecret) .Values.https.keystoreGenerator.useInitContainer }}
+      initContainers:
+        {{- include "geoserver.keystoreInitContainer" . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            {{- if .Values.https.enabled }}
+            - name: https
+              containerPort: 8443
+              protocol: TCP
+            {{- end }}
+          env:
+            {{- if .Values.geoserver.admin.username }}
+            - name: GEOSERVER_ADMIN_USER
+              value: {{ .Values.geoserver.admin.username | quote }}
+            {{- end }}
+            {{- if .Values.geoserver.admin.password }}
+            - name: GEOSERVER_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "geoserver.fullname" . }}-admin
+                  key: password
+            {{- end }}
+            {{- if .Values.https.enabled }}
+            - name: HTTPS_ENABLED
+              value: "true"
+            {{- if or .Values.https.keystoreSecret .Values.https.autoGenerateKeystore }}
+            - name: HTTPS_KEYSTORE_FILE
+              value: {{ .Values.https.keystoreFile | quote }}
+            - name: HTTPS_KEYSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.https.keystoreSecret | default (printf "%s-https" (include "geoserver.fullname" .)) }}
+                  key: keystorePassword
+            - name: HTTPS_KEY_ALIAS
+              value: {{ .Values.https.keyAlias | quote }}
+            {{- end }}
+            {{- end }}
+            {{- if .Values.postgresql.jndi.enabled }}
+            - name: POSTGRES_JNDI_ENABLED
+              value: "true"
+            - name: POSTGRES_HOST
+              value: {{ .Values.postgresql.jndi.host | quote }}
+            - name: POSTGRES_PORT
+              value: {{ .Values.postgresql.jndi.port | quote }}
+            - name: POSTGRES_DB
+              value: {{ .Values.postgresql.jndi.database | quote }}
+            - name: POSTGRES_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.postgresql.jndi.existingSecret }}
+                  name: {{ .Values.postgresql.jndi.existingSecret }}
+                  key: {{ .Values.postgresql.jndi.existingSecretUsernameKey }}
+                  {{- else }}
+                  name: {{ include "geoserver.fullname" . }}-postgresql
+                  key: username
+                  {{- end }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.postgresql.jndi.existingSecret }}
+                  name: {{ .Values.postgresql.jndi.existingSecret }}
+                  key: {{ .Values.postgresql.jndi.existingSecretPasswordKey }}
+                  {{- else }}
+                  name: {{ include "geoserver.fullname" . }}-postgresql
+                  key: password
+                  {{- end }}
+            - name: POSTGRES_JNDI_RESOURCE_NAME
+              value: {{ .Values.postgresql.jndi.resourceName | quote }}
+            {{- end }}
+            {{- if .Values.geoserver.extensions.enabled }}
+            - name: INSTALL_EXTENSIONS
+              value: "true"
+            {{- if .Values.geoserver.extensions.stable }}
+            - name: STABLE_EXTENSIONS
+              value: {{ join "," .Values.geoserver.extensions.stable | quote }}
+            {{- end }}
+            {{- if .Values.geoserver.extensions.community }}
+            - name: COMMUNITY_EXTENSIONS
+              value: {{ join "," .Values.geoserver.extensions.community | quote }}
+            {{- end }}
+            {{- end }}
+            {{- range $key, $value := .Values.geoserver.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          volumeMounts:
+            - name: geoserver-data
+              mountPath: /opt/geoserver_data
+            {{- if .Values.geoserver.additionalLibs.enabled }}
+            - name: additional-libs
+              mountPath: /opt/additional_libs
+            {{- end }}
+            {{- if .Values.geoserver.additionalFonts.enabled }}
+            - name: additional-fonts
+              mountPath: /opt/additional_fonts
+            {{- end }}
+            {{- if and .Values.https.enabled (or .Values.https.keystoreSecret .Values.https.autoGenerateKeystore) }}
+            - name: https-keystore
+              mountPath: /opt
+              readOnly: true
+            {{- end }}
+          {{- if .Values.healthcheck.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.healthcheck.url | default "/geoserver/web/wicket/resource/org.geoserver.web.GeoServerBasePage/img/logo.png" }}
+              port: http
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.healthcheck.url | default "/geoserver/web/wicket/resource/org.geoserver.web.GeoServerBasePage/img/logo.png" }}
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: geoserver-data
+          {{- if .Values.geoserver.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.geoserver.persistence.existingClaim | default (printf "%s-data" (include "geoserver.fullname" .)) }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- if .Values.geoserver.additionalLibs.enabled }}
+        - name: additional-libs
+          persistentVolumeClaim:
+            claimName: {{ .Values.geoserver.additionalLibs.existingClaim }}
+        {{- end }}
+        {{- if .Values.geoserver.additionalFonts.enabled }}
+        - name: additional-fonts
+          persistentVolumeClaim:
+            claimName: {{ .Values.geoserver.additionalFonts.existingClaim }}
+        {{- end }}
+        {{- if and .Values.https.enabled (or .Values.https.keystoreSecret .Values.https.autoGenerateKeystore) }}
+        - name: https-keystore
+          secret:
+            secretName: {{ .Values.https.keystoreSecret | default (printf "%s-https" (include "geoserver.fullname" .)) }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

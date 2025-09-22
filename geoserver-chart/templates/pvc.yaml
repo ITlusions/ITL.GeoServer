@@ -1,0 +1,21 @@
+{{- if and .Values.geoserver.persistence.enabled (not .Values.geoserver.persistence.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "geoserver.fullname" . }}-data
+  labels:
+    {{- include "geoserver.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.geoserver.persistence.accessMode | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.geoserver.persistence.size | quote }}
+  {{- if .Values.geoserver.persistence.storageClass }}
+  {{- if (eq "-" .Values.geoserver.persistence.storageClass) }}
+  storageClassName: ""
+  {{- else }}
+  storageClassName: {{ .Values.geoserver.persistence.storageClass | quote }}
+  {{- end }}
+  {{- end }}
+{{- end }}

@@ -1,0 +1,97 @@
+# Development values for GeoServer
+# Use this for local development and testing
+
+replicaCount: 1
+
+image:
+  repository: docker.osgeo.org/geoserver
+  tag: "2.27.2"
+  pullPolicy: IfNotPresent
+
+geoserver:
+  admin:
+    username: "admin"
+    password: "geoserver"
+    
+  env:
+    # Development settings - keep demo data
+    SKIP_DEMO_DATA: "false"
+    CORS_ENABLED: "true"
+    CORS_ALLOWED_ORIGINS: "*"
+    EXTRA_JAVA_OPTS: "-Xms256m -Xmx1g"
+    WEBAPP_CONTEXT: "geoserver"
+    ROOT_WEBAPP_REDIRECT: "true"
+    RUN_UNPRIVILEGED: "true"
+    
+  extensions:
+    enabled: true
+    stable:
+      - "wps"
+      - "css"
+      - "importer"
+    
+  persistence:
+    enabled: false  # Use emptyDir for development
+
+# No HTTPS for development
+https:
+  enabled: false
+
+# Simple ingress for development
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+  hosts:
+    - host: geoserver.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Minimal resources for development
+resources:
+  limits:
+    cpu: "1000m"
+    memory: "1Gi"
+  requests:
+    cpu: "250m"
+    memory: "512Mi"
+
+# No auto-scaling for development
+autoscaling:
+  enabled: false
+
+# No PostgreSQL for development
+postgresql:
+  jndi:
+    enabled: false
+
+# Basic health checks
+healthcheck:
+  enabled: true
+
+# No monitoring for development
+monitoring:
+  enabled: false
+
+# Basic security for development
+podSecurityContext:
+  fsGroup: 999
+  runAsNonRoot: true
+  runAsUser: 999
+  runAsGroup: 999
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 999
+
+# No network policy for development
+networkPolicy:
+  enabled: false
